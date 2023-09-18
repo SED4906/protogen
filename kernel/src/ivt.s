@@ -27,8 +27,8 @@ isr_common_stub:
     push %r10
     push %r9
     push %r8
-    push %rbp
     pushq $0xDEFEA7
+    push %rbp
     push %rdi
     push %rsi
     push %rdx
@@ -46,8 +46,8 @@ isr_common_stub:
     pop %rdx
     pop %rsi
     pop %rdi
-    add $0x8, %rsp
     pop %rbp
+    add $0x8, %rsp
     pop %r8
     pop %r9
     pop %r10

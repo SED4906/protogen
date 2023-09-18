@@ -1,9 +1,9 @@
+use crate::framebuffer;
 use core::fmt;
 use spin::Mutex;
-use crate::framebuffer;
 
 struct Writer {}
-static WRITER: Mutex<Writer> = Mutex::new(Writer {  });
+static WRITER: Mutex<Writer> = Mutex::new(Writer {});
 static mut COL: u64 = 0;
 static mut ROW: u64 = 0;
 
@@ -36,8 +36,15 @@ impl fmt::Write for Writer {
                         }
                     }
                     _ => {
-                        framebuffer::rect(COL*8, ROW*16, COL*8+8, ROW*16+16, 0x00000000, 0x00000000);
-                        framebuffer::character(COL*8, ROW*16, *c, 0xFFFFFFFF);
+                        framebuffer::rect(
+                            COL * 8,
+                            ROW * 16,
+                            COL * 8 + 8,
+                            ROW * 16 + 16,
+                            0x00000000,
+                            0x00000000,
+                        );
+                        framebuffer::character(COL * 8, ROW * 16, *c, 0xFFFFFFFF);
                         COL += 1;
                         if COL >= framebuffer::get_framebuffer().width / 8 {
                             COL = 0;

@@ -1,20 +1,25 @@
 #![feature(abi_x86_interrupt)]
 #![feature(error_in_core)]
 #![feature(panic_info_message)]
+#![feature(concat_bytes)]
+#![feature(slice_as_chunks)]
+#![feature(ptr_from_ref)]
 #![no_std]
 #![no_main]
 
 use x86_64::instructions;
 use x86_64::instructions::interrupts;
 
-mod process;
 mod framebuffer;
-mod memory;
-mod terminal;
 mod gdt;
 mod idt;
+mod memory;
+mod process;
+mod terminal;
 
-static IMAGE: &[u8;8720] = include_bytes!("testing_elf");
+#[repr(C, align(4096))]
+pub struct A4096;
+static TEST_IMAGE: (A4096, [u8; 4096]) = (A4096, *concat_bytes!([0xEB, 0xFE], [0; 4094]));
 
 #[no_mangle]
 unsafe extern "C" fn _start() -> ! {
@@ -27,7 +32,10 @@ unsafe extern "C" fn _start() -> ! {
     idt::build();
     interrupts::enable();
     println!("interrupt descriptor table built");
-    process::spawn(IMAGE);
+    let proc = process::create_process(&TEST_IMAGE.1).expect("couldn't create process");
+    process::PROCESSES = Some(proc);
+    process::CURRENT_PROCESS = Some(process::PROCESSES.as_mut().unwrap());
+    process::enter_task();
     hcf();
 }
 
@@ -35,14 +43,14 @@ unsafe extern "C" fn _start() -> ! {
 fn rust_panic(_info: &core::panic::PanicInfo) -> ! {
     if let Some(message) = _info.message() {
         println!();
-        println!("                             \n");
-        println!("                             \n");
-        println!("    FLAGRANT SYSTEM ERROR    \n");
-        println!("       Computer over.        \n");
-        println!("      Panic = Very Yes.      \n");
-        println!("                             \n");
-        println!("                             \n");
-        println!("                             \n");
+        println!("                             ");
+        println!("                             ");
+        println!("    FLAGRANT SYSTEM ERROR    ");
+        println!("       Computer over.        ");
+        println!("      Panic = Very Yes.      ");
+        println!("                             ");
+        println!("                             ");
+        println!("                             ");
         println!("{message}");
     }
     hcf();
