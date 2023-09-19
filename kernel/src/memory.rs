@@ -30,7 +30,6 @@ pub fn allocate<T>() -> Result<*mut T, MemoryError> {
         let next = &mut *FREELIST.0;
         let current = FREELIST.0;
         FREELIST.0 = next.0;
-        print!("[{:x}]", current as u64);
         Ok(current as *mut T)
     }
 }

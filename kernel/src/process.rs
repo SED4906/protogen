@@ -17,7 +17,7 @@ pub struct Process<'a> {
 
 pub static mut CURRENT_PROCESS: Option<&mut Process> = None;
 
-const PROCESS_ENTRY: usize = 0x2000;
+const PROCESS_ENTRY: usize = 0x1000;
 
 unsafe fn create_new_pagemap<'a>() -> Option<&'a mut [u64; 512]> {
     let mut pagemap = &mut *(allocate::<[u64; 512]>().ok()?);
@@ -51,12 +51,9 @@ pub unsafe fn create_process<'a>(image: &[u8]) -> Option<&mut Process<'a>> {
             7,
         )?;
         page_number += 1;
-        print!("{page_number}")
     }
     println!("mapped stack");
     let process_page = allocate::<Process>().ok()?;
-    crate::memory::map_to(pagemap, 0x1000, process_page as u64 & 0x0000FFFFFFFFF000, 7)?;
-    println!("mapped process");
     *process_page = Process {
         _pid: 1,
         _active: None,
