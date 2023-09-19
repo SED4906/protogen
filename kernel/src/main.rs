@@ -20,7 +20,7 @@ mod terminal;
 
 #[repr(C, align(4096))]
 pub struct A4096;
-static TEST_IMAGE: (A4096, [u8; 4096]) = (A4096, *concat_bytes!([0xEB, 0xFE], [0; 4094]));
+static TEST_IMAGE: (A4096, [u8; 2]) = (A4096, [0xEB, 0xFE]);
 
 #[no_mangle]
 unsafe extern "C" fn _start() -> ! {
@@ -34,13 +34,13 @@ unsafe extern "C" fn _start() -> ! {
     println!("interrupt descriptor table built");
     process::store_kernel_pagemap();
     let test_image = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
-    test_image.copy_from(&TEST_IMAGE.1, 1);
+    test_image.as_mut().unwrap()[0..2].copy_from_slice(&TEST_IMAGE.1);
     process::create_process(&*test_image).expect("couldn't create process");
     let test_image2 = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
-    test_image2.copy_from(&TEST_IMAGE.1, 1);
+    test_image2.as_mut().unwrap()[0..2].copy_from_slice(&TEST_IMAGE.1);
     process::create_process(&*test_image2).expect("couldn't create process");
     let test_image3 = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
-    test_image3.copy_from(&TEST_IMAGE.1, 1);
+    test_image3.as_mut().unwrap()[0..2].copy_from_slice(&TEST_IMAGE.1);
     process::create_process(&*test_image3).expect("couldn't create process");
     interrupts::enable();
     println!("enabled interrupts");

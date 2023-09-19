@@ -59,7 +59,7 @@ pub unsafe fn create_process<'a>(image: &[u8]) -> Option<()> {
     }
     println!("mapped stack");
     let process_page = (allocate::<Process>().ok()? as u64 & 0x0000FFFFFFFFF000) as *mut Process;
-    crate::memory::map_to(pagemap, 0x1000, process_page as u64, 7)?;
+    crate::memory::map_to(pagemap, 0x1000, process_page as u64, 3)?;
     *process_page = Process {
         _pid: 1,
         _active: None,
