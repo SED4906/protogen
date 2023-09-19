@@ -15,7 +15,12 @@ unsafe extern "sysv64" fn interrupt_handler(stack: *mut u64, error_code: u64, is
         // this error doesn't push a code itself
         pushes_code = false;
     }
-    println!("...Exception #{:x} at {:x}", isr, *stack);
+    println!(
+        "...Exception #{:x} at {:x}, stack {:x}",
+        isr,
+        *stack,
+        *stack.add(3)
+    );
     if pushes_code {
         println!("Error code: {:x}", error_code);
     }

@@ -1,15 +1,12 @@
+use crate::print;
+use x86_64::VirtAddr;
+
 struct Freelist(*mut Freelist);
 static mut FREELIST: Freelist = Freelist(core::ptr::null_mut());
 static MEMMAP_REQUEST: limine::MemmapRequest = limine::MemmapRequest::new(0);
 static HHDM_REQUEST: limine::HhdmRequest = limine::HhdmRequest::new(0);
 
-use x86_64::{
-    registers::control::Cr3,
-    structures::paging::{FrameAllocator, OffsetPageTable, PhysFrame, Size4KiB},
-    PhysAddr, VirtAddr,
-};
-
-static mut HHDM: Option<VirtAddr> = None;
+static mut HHDM: Option<u64> = None;
 
 #[derive(Debug)]
 pub enum MemoryError {
@@ -25,8 +22,6 @@ impl core::fmt::Display for MemoryError {
     }
 }
 
-pub struct Allocator {}
-
 pub fn allocate<T>() -> Result<*mut T, MemoryError> {
     unsafe {
         if FREELIST.0.is_null() {
@@ -34,7 +29,8 @@ pub fn allocate<T>() -> Result<*mut T, MemoryError> {
         }
         let next = &mut *FREELIST.0;
         let current = FREELIST.0;
-        FREELIST.0 = next;
+        FREELIST.0 = next.0;
+        print!("[{:x}]", current as u64);
         Ok(current as *mut T)
     }
 }
@@ -48,18 +44,24 @@ pub fn free<T>(page: *mut T) {
 }
 
 pub fn build() {
-    if let Some(memory_map_response) = MEMMAP_REQUEST.get_response().get_mut() {
-        for entry in memory_map_response.memmap_mut() {
+    if let Some(memmap_response) = MEMMAP_REQUEST.get_response().get_mut() {
+        for entry in memmap_response.memmap_mut() {
             if entry.typ != limine::MemoryMapEntryType::Usable {
                 continue;
             }
-            free(entry.base as *mut Freelist);
+            let mut address = entry.base;
+            while address < entry.base + entry.len {
+                free(address as *mut Freelist);
+                address += 4096;
+            }
         }
     } else {
         panic!("I can't get memory mapping information from the bootloader.\nIs it broken??");
     }
-    if let Some(higher_half_response) = HHDM_REQUEST.get_response().get() {
-        higher_half_response.offset;
+    if let Some(hhdm_response) = HHDM_REQUEST.get_response().get() {
+        unsafe {
+            HHDM = Some(hhdm_response.offset);
+        }
     } else {
         panic!("I can't get HHDM information from the bootloader.\nIs it broken??");
     }
@@ -68,30 +70,56 @@ pub fn build() {
 pub fn hhdm() -> VirtAddr {
     unsafe {
         if let Some(value) = HHDM {
-            value
+            VirtAddr::from_ptr(value as *const u64)
         } else {
-            HHDM = if let Some(hhdm_response) = HHDM_REQUEST.get_response().get() {
-                Some(VirtAddr::new(hhdm_response.offset))
-            } else {
-                panic!("I can't get HHDM information from the bootloader.\nI must have lost track of it.");
-            };
-            HHDM.unwrap()
+            panic!("I can't get the saved HHDM information somehow.\nI must have lost track of it.\nThis should never happen");
         }
     }
 }
 
-unsafe impl FrameAllocator<Size4KiB> for Allocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        allocate::<u64>().ok().map(|a| {
-            PhysFrame::from_start_address(PhysAddr::new(a as u64))
-                .expect("Allocated page that was not aligned")
-        })
+unsafe fn map_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut [u64; 512]> {
+    if pagemap[entry] & 1 == 0u64 {
+        pagemap[entry] = allocate::<[u64; 512]>().ok()? as u64 | 7;
+        (*((pagemap[entry] & !0xFFF) as *mut [u64; 512])).fill(0);
+    }
+    Some(&mut *((pagemap[entry] & !0xFFF) as *mut [u64; 512]))
+}
+
+pub unsafe fn map_to(pagemap: &mut [u64; 512], vaddr: u64, paddr: u64, flags: u64) -> Option<u64> {
+    let entry_l4 = ((vaddr >> 39) & 0x1FF) as usize;
+    let entry_l3 = ((vaddr >> 30) & 0x1FF) as usize;
+    let entry_l2 = ((vaddr >> 21) & 0x1FF) as usize;
+    let entry_l1 = ((vaddr >> 12) & 0x1FF) as usize;
+
+    let pml3 = map_step(pagemap, entry_l4)?;
+    let pml2 = map_step(pml3, entry_l3)?;
+    let pml1 = map_step(pml2, entry_l2)?;
+
+    pml1[entry_l1] = paddr | flags;
+    Some(paddr)
+}
+
+unsafe fn translate_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut [u64; 512]> {
+    if pagemap[entry] & 1 == 0u64 {
+        None
+    } else {
+        Some(&mut *((pagemap[entry] & !0xFFF) as *mut [u64; 512]))
     }
 }
 
-pub unsafe fn current_page_map<'a>() -> OffsetPageTable<'a> {
-    OffsetPageTable::new(
-        &mut *(Cr3::read().0.start_address().as_u64() as *mut _),
-        hhdm(),
-    )
+pub unsafe fn translate_page(pagemap: &mut [u64; 512], vaddr: u64) -> Option<u64> {
+    let entry_l4 = ((vaddr >> 39) & 0x1FF) as usize;
+    let entry_l3 = ((vaddr >> 30) & 0x1FF) as usize;
+    let entry_l2 = ((vaddr >> 21) & 0x1FF) as usize;
+    let entry_l1 = ((vaddr >> 12) & 0x1FF) as usize;
+
+    let pml3 = translate_step(pagemap, entry_l4)?;
+    let pml2 = translate_step(pml3, entry_l3)?;
+    let pml1 = translate_step(pml2, entry_l2)?;
+
+    if pml1[entry_l1] & 1 == 0u64 {
+        None
+    } else {
+        Some(pml1[entry_l1] & !0xFFF)
+    }
 }

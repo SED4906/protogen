@@ -32,9 +32,10 @@ unsafe extern "C" fn _start() -> ! {
     idt::build();
     interrupts::enable();
     println!("interrupt descriptor table built");
-    let proc = process::create_process(&TEST_IMAGE.1).expect("couldn't create process");
-    process::PROCESSES = Some(proc);
-    process::CURRENT_PROCESS = Some(process::PROCESSES.as_mut().unwrap());
+    let test_image = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
+    test_image.copy_from(&TEST_IMAGE.1, 1);
+    let proc = process::create_process(&*test_image).expect("couldn't create process");
+    process::CURRENT_PROCESS = Some(proc);
     process::enter_task();
     hcf();
 }
