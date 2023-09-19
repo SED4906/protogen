@@ -1,5 +1,5 @@
-use x86::io::{inb, outb};
 use crate::print;
+use x86::io::{inb, outb};
 
 pub unsafe fn pic_remap() {
     let a1 = inb(0x21);
@@ -18,7 +18,7 @@ pub unsafe fn pic_remap() {
 
 pub unsafe fn pit_init() {
     outb(0x43, 0x34);
-    outb(0x40,0xFF);
+    outb(0x40, 0xFF);
     outb(0x40, 0xFF);
     let a1 = inb(0x21);
     let a2 = inb(0xA1);

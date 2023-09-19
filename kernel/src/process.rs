@@ -1,6 +1,5 @@
 use x86_64::registers::control::Cr3;
 
-
 use crate::memory::allocate;
 use crate::println;
 
@@ -60,12 +59,7 @@ pub unsafe fn create_process<'a>(image: &[u8]) -> Option<()> {
     }
     println!("mapped stack");
     let process_page = (allocate::<Process>().ok()? as u64 & 0x0000FFFFFFFFF000) as *mut Process;
-    crate::memory::map_to(
-        pagemap,
-        0x1000,
-        process_page as u64,
-        7,
-    )?;
+    crate::memory::map_to(pagemap, 0x1000, process_page as u64, 7)?;
     *process_page = Process {
         _pid: 1,
         _active: None,
@@ -88,6 +82,21 @@ pub unsafe fn create_process<'a>(image: &[u8]) -> Option<()> {
     }
     println!("made process");
     Some(())
+}
+
+#[allow(dead_code)]
+pub unsafe fn exit_process() {
+    if let Some(current_process) = &mut CURRENT_PROCESS {
+        if (**current_process).next.unwrap() == *current_process {
+            panic!("No processes left");
+        }
+        (*(**current_process).prev.unwrap()).next = (**current_process).next;
+        (*(**current_process).next.unwrap()).prev = (**current_process).prev;
+        CURRENT_PROCESS = Some((**current_process).next.unwrap());
+        enter_task();
+    } else {
+        panic!("No processes to exit");
+    }
 }
 
 #[no_mangle]

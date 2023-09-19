@@ -14,9 +14,9 @@ mod framebuffer;
 mod gdt;
 mod idt;
 mod memory;
+mod pic;
 mod process;
 mod terminal;
-mod pic;
 
 #[repr(C, align(4096))]
 pub struct A4096;
@@ -36,6 +36,12 @@ unsafe extern "C" fn _start() -> ! {
     let test_image = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
     test_image.copy_from(&TEST_IMAGE.1, 1);
     process::create_process(&*test_image).expect("couldn't create process");
+    let test_image2 = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
+    test_image2.copy_from(&TEST_IMAGE.1, 1);
+    process::create_process(&*test_image2).expect("couldn't create process");
+    let test_image3 = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
+    test_image3.copy_from(&TEST_IMAGE.1, 1);
+    process::create_process(&*test_image3).expect("couldn't create process");
     interrupts::enable();
     println!("enabled interrupts");
     loop {

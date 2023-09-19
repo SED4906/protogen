@@ -1,12 +1,12 @@
 use core::panic;
 
+use crate::pic::{pic_remap, pit_init};
 use crate::println;
 use kernel_macros::import_isrs;
 use x86_64::{
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
     VirtAddr,
 };
-use crate::pic::{pic_remap, pit_init};
 
 static mut INTERRUPT_DESCRIPTOR_TABLE: InterruptDescriptorTable = InterruptDescriptorTable::new();
 
@@ -101,9 +101,10 @@ pub unsafe fn build() {
     pic_remap();
     pit_init();
 
-    INTERRUPT_DESCRIPTOR_TABLE[32]
-        .set_handler_addr(VirtAddr::new(exit_task as u64));
+    INTERRUPT_DESCRIPTOR_TABLE[32].set_handler_addr(VirtAddr::new(exit_task as u64));
     INTERRUPT_DESCRIPTOR_TABLE.load();
 }
 
-extern "sysv64" {fn exit_task();}
+extern "sysv64" {
+    fn exit_task();
+}
