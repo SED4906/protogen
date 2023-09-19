@@ -1,4 +1,4 @@
-use crate::print;
+
 use x86_64::VirtAddr;
 
 struct Freelist(*mut Freelist);
@@ -66,6 +66,7 @@ pub fn build() {
     }
 }
 
+#[allow(dead_code)]
 pub fn hhdm() -> VirtAddr {
     unsafe {
         if let Some(value) = HHDM {
@@ -98,6 +99,7 @@ pub unsafe fn map_to(pagemap: &mut [u64; 512], vaddr: u64, paddr: u64, flags: u6
     Some(paddr)
 }
 
+#[allow(dead_code)]
 unsafe fn translate_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut [u64; 512]> {
     if pagemap[entry] & 1 == 0u64 {
         None
@@ -106,6 +108,7 @@ unsafe fn translate_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut 
     }
 }
 
+#[allow(dead_code)]
 pub unsafe fn translate_page(pagemap: &mut [u64; 512], vaddr: u64) -> Option<u64> {
     let entry_l4 = ((vaddr >> 39) & 0x1FF) as usize;
     let entry_l3 = ((vaddr >> 30) & 0x1FF) as usize;

@@ -1,7 +1,5 @@
 use x86_64::registers::control::Cr3;
-use x86_64::{
-    structures::paging::Mapper,
-};
+
 
 use crate::memory::allocate;
 use crate::println;
@@ -24,7 +22,7 @@ pub static mut KERNEL_RIP: Option<usize> = None;
 const PROCESS_ENTRY: usize = 0x2000;
 
 unsafe fn create_new_pagemap<'a>() -> Option<&'a mut [u64; 512]> {
-    let mut pagemap = &mut *(allocate::<[u64; 512]>().ok()?);
+    let pagemap = &mut *(allocate::<[u64; 512]>().ok()?);
     println!(
         "allocated {} as pagemap",
         core::ptr::from_mut(pagemap) as u64
