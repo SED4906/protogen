@@ -6,6 +6,8 @@ use x86_64::{
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
     VirtAddr,
 };
+use crate::pic::{pic_remap, pit_init};
+
 static mut INTERRUPT_DESCRIPTOR_TABLE: InterruptDescriptorTable = InterruptDescriptorTable::new();
 
 #[no_mangle]
@@ -95,5 +97,13 @@ pub unsafe fn build() {
     INTERRUPT_DESCRIPTOR_TABLE
         .security_exception
         .set_handler_addr(VirtAddr::new(isr30 as u64));
+
+    pic_remap();
+    pit_init();
+
+    INTERRUPT_DESCRIPTOR_TABLE[32]
+        .set_handler_addr(VirtAddr::new(exit_task as u64));
     INTERRUPT_DESCRIPTOR_TABLE.load();
 }
+
+extern "sysv64" {fn exit_task();}

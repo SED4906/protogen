@@ -16,6 +16,7 @@ mod idt;
 mod memory;
 mod process;
 mod terminal;
+mod pic;
 
 #[repr(C, align(4096))]
 pub struct A4096;
@@ -30,14 +31,23 @@ unsafe extern "C" fn _start() -> ! {
     gdt::build();
     println!("global descriptor table built");
     idt::build();
-    interrupts::enable();
     println!("interrupt descriptor table built");
+    process::store_kernel_pagemap();
     let test_image = memory::allocate::<[u8; 4096]>().expect("couldn't allocate memory");
     test_image.copy_from(&TEST_IMAGE.1, 1);
-    let proc = process::create_process(&*test_image).expect("couldn't create process");
-    process::CURRENT_PROCESS = Some(proc);
-    process::enter_task();
-    hcf();
+    process::create_process(&*test_image).expect("couldn't create process");
+    interrupts::enable();
+    println!("enabled interrupts");
+    loop {
+        process::enter_task();
+        interrupts::disable();
+        if let Some(current_process) = process::CURRENT_PROCESS {
+            process::CURRENT_PROCESS = Some((*current_process).next.unwrap())
+        } else {
+            panic!("No processes");
+        }
+        interrupts::enable();
+    }
 }
 
 #[panic_handler]
