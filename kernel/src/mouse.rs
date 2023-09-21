@@ -82,7 +82,7 @@ pub unsafe fn mouse_handler() -> Option<(i16, i16, bool, bool, bool)> {
         MOUSE_CYCLE=0;
         outb(0xA0, 0x20);
         outb(0x20, 0x20);
-        return Some((xrel,yrel, b0 & 1 == 1, b0 & 4 == 1, b0 & 2 == 1))
+        return Some((xrel,yrel, b0 & 1 == 1, b0 & 4 == 4, b0 & 2 == 2))
     }
     outb(0xA0, 0x20);
     outb(0x20, 0x20);
