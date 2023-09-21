@@ -17,6 +17,8 @@ mod memory;
 mod pic;
 mod process;
 mod terminal;
+mod keyboard;
+mod mouse;
 
 #[repr(C, align(4096))]
 pub struct A4096;

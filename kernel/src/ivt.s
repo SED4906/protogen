@@ -3,8 +3,9 @@
 .macro ISR_NOERRCODE isrN
     isr\isrN:
         cli
+        pushq $0xEA7BEEF
         pushq $\isrN
-        jmp isr_no_err_stub
+        jmp isr_common_stub
     .global isr\isrN
 .endm
 
@@ -16,8 +17,6 @@
     .global isr\isrN
 .endm
 
-isr_no_err_stub:
-    pushq $0xEA7BEEF
 isr_common_stub:
     push %r15
     push %r14
@@ -92,8 +91,6 @@ ISR_ERRCODE   29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
 
-.set i, 32
-.irp i,223
-    ISR_NOERRCODE i
-    .set i, i+1
-.endr
+ISR_NOERRCODE 33
+ISR_NOERRCODE 44
+

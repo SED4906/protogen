@@ -39,10 +39,12 @@ pub unsafe fn create_process<'a>(image: &[u8]) -> Option<()> {
     let pagemap = create_new_pagemap()?;
     let mut page_number = 0;
     for chunk in image.chunks(4096) {
+        let page = allocate::<u8>().ok()?;
+        page.copy_from(chunk.as_ptr(), chunk.len());
         crate::memory::map_to(
             pagemap,
             PROCESS_ENTRY as u64 + 0x1000 * page_number,
-            chunk.as_ptr() as u64 & 0x0000FFFFFFFFF000,
+            page as u64 & 0x0000FFFFFFFFF000,
             7,
         )?;
         page_number += 1;

@@ -24,6 +24,14 @@ pub fn pixel(x: u64, y: u64, color: u32) {
     }
 }
 
+pub fn read_pixel(x: u64, y: u64) -> u32 {
+    let framebuffer = get_framebuffer();
+    let pixel_offset = y as usize * framebuffer.pitch as usize + x as usize * 4;
+    return unsafe {
+        *(framebuffer.address.as_ptr().unwrap().add(pixel_offset) as *mut u32)
+    };
+}
+
 pub fn rect(x0: u64, y0: u64, x1: u64, y1: u64, border: u32, fill: u32) {
     for py in y0..=y1 {
         for px in x0..=x1 {

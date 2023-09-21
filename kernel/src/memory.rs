@@ -1,4 +1,5 @@
 use x86_64::VirtAddr;
+use crate::print;
 
 struct Freelist(*mut Freelist);
 static mut FREELIST: Freelist = Freelist(core::ptr::null_mut());
@@ -99,7 +100,7 @@ pub unsafe fn map_to(pagemap: &mut [u64; 512], vaddr: u64, paddr: u64, flags: u6
 }
 
 #[allow(dead_code)]
-unsafe fn translate_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut [u64; 512]> {
+unsafe fn translate_step(pagemap: &[u64; 512], entry: usize) -> Option<&mut [u64; 512]> {
     if pagemap[entry] & 1 == 0u64 {
         None
     } else {
@@ -108,16 +109,23 @@ unsafe fn translate_step(pagemap: &mut [u64; 512], entry: usize) -> Option<&mut 
 }
 
 #[allow(dead_code)]
-pub unsafe fn translate_page(pagemap: &mut [u64; 512], vaddr: u64) -> Option<u64> {
+pub unsafe fn translate_page(pagemap: &[u64; 512], vaddr: u64) -> Option<u64> {
     let entry_l4 = ((vaddr >> 39) & 0x1FF) as usize;
     let entry_l3 = ((vaddr >> 30) & 0x1FF) as usize;
     let entry_l2 = ((vaddr >> 21) & 0x1FF) as usize;
     let entry_l1 = ((vaddr >> 12) & 0x1FF) as usize;
-
+    print!("[{}]",vaddr);
+    print!("4");
     let pml3 = translate_step(pagemap, entry_l4)?;
+    print!("[{}]",core::ptr::from_mut(pml3) as u64);
+    print!("3");
     let pml2 = translate_step(pml3, entry_l3)?;
+    print!("[{}]",core::ptr::from_mut(pml2) as u64);
+    print!("2");
     let pml1 = translate_step(pml2, entry_l2)?;
-
+    print!("[{}]",core::ptr::from_mut(pml1) as u64);
+    print!("1");
+    print!("{}", pml1[entry_l1]);
     if pml1[entry_l1] & 1 == 0u64 {
         None
     } else {

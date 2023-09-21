@@ -1,4 +1,3 @@
-use crate::print;
 use x86::io::{inb, outb};
 
 pub unsafe fn pic_remap() {
@@ -21,9 +20,7 @@ pub unsafe fn pit_init() {
     outb(0x40, 0xFF);
     outb(0x40, 0xFF);
     let a1 = inb(0x21);
-    let a2 = inb(0xA1);
     outb(0x21, a1 & !1);
-    outb(0xA1, a2 & !1);
 }
 
 static mut TIMER_TICK: usize = 5;
@@ -35,6 +32,6 @@ pub unsafe extern "sysv64" fn timer_tick() -> usize {
     }
     TIMER_TICK -= 1;
     outb(0x20, 0x20);
-    print!("{TIMER_TICK}");
+    //print!("{TIMER_TICK}");
     TIMER_TICK
 }
